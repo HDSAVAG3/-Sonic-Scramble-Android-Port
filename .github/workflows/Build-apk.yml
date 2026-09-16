@@ -122,58 +122,8 @@ jobs:
           Console.WriteLine(
               $"Detected: {version.DisplayVersion}");
 
-          /*
-           * GameMaker-Mobiler options:
-           *
-           * [0] Mobile touch integration
-           * [1] Mobile F2
-           * [2] Mobile Heal
-           * [3] Mobile CN
-           * [4] Android system keyboard
-           * [5] Dual joystick controls
-           * [6] Embed music into data.win
-           *
-           * Mobile touch integration is disabled for this
-           * crash-isolation test.
-           */
-
-          var mobileOptions = new[]
-          {
-              false,  // Mobile touch controls OFF for crash test
-              true,   // Mobile F2
-              true,   // Mobile Heal
-              true,   // Mobile CN
-              true,   // Android system keyboard
-              true,   // Dual joystick controls
-              false   // Do not embed music into data.win
-          };
-
-          Console.WriteLine("Mobile touch integration DISABLED for crash test.");
-          Console.WriteLine("Android system keyboard enabled.");
-          Console.WriteLine("Dual joystick option enabled, but touch integration is disabled.");
-
-          var modifiedDataWin =
-              Path.Combine(
-                  Path.GetTempPath(),
-                  $"sonic_scramble_mobile_{Guid.NewGuid():N}.game.droid");
-
-          var utmt = new UtmtService(
-              (message, important) =>
-                  Console.WriteLine(
-                      (important ? "[!] " : "    ") + message));
-
-          await utmt.ModifyDataWinToPath(
-              dataWin,
-              mobileOptions,
-              modifiedDataWin,
-              CancellationToken.None);
-
-          if (!File.Exists(modifiedDataWin))
-              throw new Exception(
-                  "Modified data.win was not created.");
-
           Console.WriteLine(
-              $"Modified game data: {modifiedDataWin}");
+              "BASELINE TEST: Using original data.win with no mobile modifications.");
 
           var builder = new ApkBuilder(
               (message, important) =>
@@ -194,7 +144,7 @@ jobs:
           await builder.BuildApkAsync(
               template,
               gameDir,
-              modifiedDataWin,
+              dataWin,
               output,
               "Sonic Scramble",
               "com.hdsavag3.sonicscramble",
@@ -274,5 +224,5 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v7
         with:
-          name: Sonic-Scramble-Android-Crash-Test
+          name: Sonic-Scramble-Android-Baseline-Test
           path: mobiler/PortCli/bin/Release/net9.0-windows/Sonic-Scramble-Android.apk
