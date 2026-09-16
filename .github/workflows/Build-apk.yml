@@ -13,19 +13,21 @@ jobs:
       - name: Check out port repo
         uses: actions/checkout@v4
 
-      - name: Download game ZIP from latest release
+      - name: Download game ZIP from v1.0 release
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           New-Item -ItemType Directory -Force -Path gamezip | Out-Null
-          gh release download latest --repo "${{ github.repository }}" --pattern "*.zip" --dir gamezip
+          gh release download v1.0 --repo "${{ github.repository }}" --pattern "*.zip" --dir gamezip
 
           $zip = Get-ChildItem gamezip -Filter *.zip | Select-Object -First 1
 
           if (-not $zip) {
             throw "No ZIP release asset found."
           }
+
+          Write-Host "Found game ZIP: $($zip.Name)"
 
       - name: Extract game
         shell: pwsh
@@ -44,6 +46,8 @@ jobs:
           if (-not $data) {
             throw "data.win was not found in the game ZIP."
           }
+
+          Write-Host "Found data.win: $($data.FullName)"
 
           "DATA_WIN=$($data.FullName)" | Out-File `
             -FilePath $env:GITHUB_ENV `
