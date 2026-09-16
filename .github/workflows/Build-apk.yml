@@ -13,6 +13,12 @@ jobs:
       - name: Check out port repo
         uses: actions/checkout@v4
 
+      - name: Install Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
       - name: Download game ZIP from v1.0 release
         shell: pwsh
         env:
@@ -179,6 +185,33 @@ jobs:
               mobiler/Tools `
               $out/Tools
           }
+
+          # GameMaker-Mobiler specifically expects:
+          # Tools/jre/bin/java.exe
+
+          $jreDestination = Join-Path $out "Tools\jre"
+
+          New-Item `
+            -ItemType Directory `
+            -Force `
+            -Path $jreDestination | Out-Null
+
+          Copy-Item `
+            -Recurse `
+            -Force `
+            "$env:JAVA_HOME\*" `
+            $jreDestination
+
+          $java = Join-Path `
+            $jreDestination `
+            "bin\java.exe"
+
+          if (-not (Test-Path $java)) {
+            throw "Java was not staged correctly: $java"
+          }
+
+          Write-Host "Java staged successfully:"
+          Write-Host $java
 
       - name: Build APK
         shell: pwsh
