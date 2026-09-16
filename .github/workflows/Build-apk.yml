@@ -132,11 +132,14 @@ jobs:
            * [4] Android system keyboard
            * [5] Dual joystick controls
            * [6] Embed music into data.win
+           *
+           * Mobile touch integration is disabled for this
+           * crash-isolation test.
            */
 
           var mobileOptions = new[]
           {
-              true,   // Mobile touch controls
+              false,  // Mobile touch controls OFF for crash test
               true,   // Mobile F2
               true,   // Mobile Heal
               true,   // Mobile CN
@@ -145,9 +148,9 @@ jobs:
               false   // Do not embed music into data.win
           };
 
-          Console.WriteLine("Enabling mobile touch controls...");
-          Console.WriteLine("Enabling dual joystick controls...");
-          Console.WriteLine("Enabling Android system keyboard...");
+          Console.WriteLine("Mobile touch integration DISABLED for crash test.");
+          Console.WriteLine("Android system keyboard enabled.");
+          Console.WriteLine("Dual joystick option enabled, but touch integration is disabled.");
 
           var modifiedDataWin =
               Path.Combine(
@@ -167,7 +170,7 @@ jobs:
 
           if (!File.Exists(modifiedDataWin))
               throw new Exception(
-                  "Mobile-modified data.win was not created.");
+                  "Modified data.win was not created.");
 
           Console.WriteLine(
               $"Modified game data: {modifiedDataWin}");
@@ -271,5 +274,5 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v7
         with:
-          name: Sonic-Scramble-Android-Touch-Controller
+          name: Sonic-Scramble-Android-Crash-Test
           path: mobiler/PortCli/bin/Release/net9.0-windows/Sonic-Scramble-Android.apk
