@@ -19,9 +19,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           New-Item -ItemType Directory -Force -Path gamezip | Out-Null
-          gh release download v1.0 --repo "${{ github.repository }}" --pattern "*.zip" --dir gamezip
 
-          $zip = Get-ChildItem gamezip -Filter *.zip | Select-Object -First 1
+          gh release download v1.0 `
+            --repo "${{ github.repository }}" `
+            --pattern "*.zip" `
+            --dir gamezip
+
+          $zip = Get-ChildItem gamezip -Filter *.zip |
+            Select-Object -First 1
 
           if (-not $zip) {
             throw "No ZIP release asset found."
@@ -34,14 +39,16 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force -Path game | Out-Null
 
-          $zip = Get-ChildItem gamezip -Filter *.zip | Select-Object -First 1
+          $zip = Get-ChildItem gamezip -Filter *.zip |
+            Select-Object -First 1
 
           Expand-Archive `
             -LiteralPath $zip.FullName `
             -DestinationPath game `
             -Force
 
-          $data = Get-ChildItem game -Filter data.win -Recurse | Select-Object -First 1
+          $data = Get-ChildItem game -Filter data.win -Recurse |
+            Select-Object -First 1
 
           if (-not $data) {
             throw "data.win was not found in the game ZIP."
@@ -49,13 +56,11 @@ jobs:
 
           Write-Host "Found data.win: $($data.FullName)"
 
-          "DATA_WIN=$($data.FullName)" | Out-File `
-            -FilePath $env:GITHUB_ENV `
-            -Append
+          "DATA_WIN=$($data.FullName)" |
+            Out-File -FilePath $env:GITHUB_ENV -Append
 
-          "GAME_DIR=$($data.Directory.FullName)" | Out-File `
-            -FilePath $env:GITHUB_ENV `
-            -Append
+          "GAME_DIR=$($data.Directory.FullName)" |
+            Out-File -FilePath $env:GITHUB_ENV -Append
 
       - name: Download GameMaker-Mobiler
         shell: pwsh
@@ -74,7 +79,7 @@ jobs:
           <Project Sdk="Microsoft.NET.Sdk">
             <PropertyGroup>
               <OutputType>Exe</OutputType>
-              <TargetFramework>net8.0-windows</TargetFramework>
+              <TargetFramework>net9.0-windows</TargetFramework>
               <ImplicitUsings>enable</ImplicitUsings>
               <Nullable>enable</Nullable>
             </PropertyGroup>
@@ -163,7 +168,7 @@ jobs:
         shell: pwsh
         run: |
           $out = Resolve-Path `
-            mobiler/PortCli/bin/Release/net8.0-windows
+            mobiler/PortCli/bin/Release/net9.0-windows
 
           Copy-Item -Recurse -Force `
             mobiler/'GMS2 APK' `
@@ -177,7 +182,7 @@ jobs:
 
       - name: Build APK
         shell: pwsh
-        working-directory: mobiler/PortCli/bin/Release/net8.0-windows
+        working-directory: mobiler/PortCli/bin/Release/net9.0-windows
         run: |
           ./PortCli.exe
 
@@ -185,4 +190,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Sonic-Scramble-Android
-          path: mobiler/PortCli/bin/Release/net8.0-windows/Sonic-Scramble-Android.apk
+          path: mobiler/PortCli/bin/Release/net9.0-windows/Sonic-Scramble-Android.apk
