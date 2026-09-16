@@ -269,7 +269,7 @@ jobs:
           ./PortCli.exe
 
       - name: Upload APK
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: Sonic-Scramble-Android-Touch-Controller
           path: mobiler/PortCli/bin/Release/net9.0-windows/Sonic-Scramble-Android.apk
