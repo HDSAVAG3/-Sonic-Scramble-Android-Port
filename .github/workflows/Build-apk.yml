@@ -11,7 +11,7 @@ jobs:
 
     steps:
       - name: Check out port repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Install Java
         uses: actions/setup-java@v5
@@ -269,7 +269,7 @@ jobs:
           ./PortCli.exe
 
       - name: Upload APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: Sonic-Scramble-Android-Touch-Controller
           path: mobiler/PortCli/bin/Release/net9.0-windows/Sonic-Scramble-Android.apk
