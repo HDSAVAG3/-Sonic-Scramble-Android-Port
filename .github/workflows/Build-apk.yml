@@ -14,7 +14,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install Java
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
@@ -122,6 +122,56 @@ jobs:
           Console.WriteLine(
               $"Detected: {version.DisplayVersion}");
 
+          /*
+           * GameMaker-Mobiler options:
+           *
+           * [0] Mobile touch integration
+           * [1] Mobile F2
+           * [2] Mobile Heal
+           * [3] Mobile CN
+           * [4] Android system keyboard
+           * [5] Dual joystick controls
+           * [6] Embed music into data.win
+           */
+
+          var mobileOptions = new[]
+          {
+              true,   // Mobile touch controls
+              true,   // Mobile F2
+              true,   // Mobile Heal
+              true,   // Mobile CN
+              true,   // Android system keyboard
+              true,   // Dual joystick controls
+              false   // Do not embed music into data.win
+          };
+
+          Console.WriteLine("Enabling mobile touch controls...");
+          Console.WriteLine("Enabling dual joystick controls...");
+          Console.WriteLine("Enabling Android system keyboard...");
+
+          var modifiedDataWin =
+              Path.Combine(
+                  Path.GetTempPath(),
+                  $"sonic_scramble_mobile_{Guid.NewGuid():N}.game.droid");
+
+          var utmt = new UtmtService(
+              (message, important) =>
+                  Console.WriteLine(
+                      (important ? "[!] " : "    ") + message));
+
+          await utmt.ModifyDataWinToPath(
+              dataWin,
+              mobileOptions,
+              modifiedDataWin,
+              CancellationToken.None);
+
+          if (!File.Exists(modifiedDataWin))
+              throw new Exception(
+                  "Mobile-modified data.win was not created.");
+
+          Console.WriteLine(
+              $"Modified game data: {modifiedDataWin}");
+
           var builder = new ApkBuilder(
               (message, important) =>
                   Console.WriteLine(
@@ -141,7 +191,7 @@ jobs:
           await builder.BuildApkAsync(
               template,
               gameDir,
-              dataWin,
+              modifiedDataWin,
               output,
               "Sonic Scramble",
               "com.hdsavag3.sonicscramble",
@@ -186,10 +236,9 @@ jobs:
               $out/Tools
           }
 
-          # GameMaker-Mobiler specifically expects:
-          # Tools/jre/bin/java.exe
-
-          $jreDestination = Join-Path $out "Tools\jre"
+          $jreDestination = Join-Path `
+            $out `
+            "Tools\jre"
 
           New-Item `
             -ItemType Directory `
@@ -222,5 +271,5 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Sonic-Scramble-Android
+          name: Sonic-Scramble-Android-Touch-Controller
           path: mobiler/PortCli/bin/Release/net9.0-windows/Sonic-Scramble-Android.apk
