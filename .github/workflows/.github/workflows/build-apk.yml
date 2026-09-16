@@ -1,0 +1,125 @@
+name: Build Sonic Scramble APK
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Check out port repo
+        uses: actions/checkout@v4
+
+      - name: Download game ZIP from latest release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          New-Item -ItemType Directory -Force -Path gamezip | Out-Null
+          gh release download latest --repo "${{ github.repository }}" --pattern "*.zip" --dir gamezip
+          $zip = Get-ChildItem gamezip -Filter *.zip | Select-Object -First 1
+          if (-not $zip) { throw "No ZIP release asset found. Upload the Sonic Scramble ZIP to a GitHub release first." }
+
+      - name: Extract game
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path game | Out-Null
+          $zip = Get-ChildItem gamezip -Filter *.zip | Select-Object -First 1
+          Expand-Archive -LiteralPath $zip.FullName -DestinationPath game -Force
+          $data = Get-ChildItem game -Filter data.win -Recurse | Select-Object -First 1
+          if (-not $data) { throw "data.win was not found in the game ZIP." }
+          "DATA_WIN=$($data.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "GAME_DIR=$($data.Directory.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Download GameMaker-Mobiler
+        shell: pwsh
+        run: |
+          git clone --recursive --depth 1 https://github.com/znm2500/GameMaker-Mobiler.git mobiler
+
+      - name: Create command-line builder
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path mobiler/PortCli | Out-Null
+
+          @'
+          <Project Sdk="Microsoft.NET.Sdk">
+            <PropertyGroup>
+              <OutputType>Exe</OutputType>
+              <TargetFramework>net8.0-windows</TargetFramework>
+              <ImplicitUsings>enable</ImplicitUsings>
+              <Nullable>enable</Nullable>
+            </PropertyGroup>
+            <ItemGroup>
+              <ProjectReference Include="../GameMaker-Mobiler/GameMaker-Mobiler.csproj" />
+            </ItemGroup>
+          </Project>
+          '@ | Set-Content mobiler/PortCli/PortCli.csproj -Encoding UTF8
+
+          @'
+          using GameMaker_Mobiler.Services;
+
+          var gameDir = Environment.GetEnvironmentVariable("GAME_DIR") ?? throw new Exception("GAME_DIR missing");
+          var dataWin = Environment.GetEnvironmentVariable("DATA_WIN") ?? throw new Exception("DATA_WIN missing");
+          var output = Path.Combine(Path.GetFullPath("."), "Sonic-Scramble-Android.apk");
+
+          var version = DataWinVersionReader.Read(dataWin);
+          if (!version.IsValid) throw new Exception("Could not read the GameMaker data.win version.");
+          Console.WriteLine($"Detected: {version.DisplayVersion}");
+
+          var builder = new ApkBuilder((message, important) =>
+              Console.WriteLine((important ? "[!] " : "    ") + message));
+
+          var template = builder.FindTemplateApk(version);
+          Console.WriteLine($"Template: {template}");
+
+          var progress = new Progress<(int Percent, string Message)>(
+              p => Console.WriteLine($"[{p.Percent}%] {p.Message}"));
+
+          await builder.BuildApkAsync(
+              template,
+              gameDir,
+              dataWin,
+              output,
+              "Sonic Scramble",
+              "com.hdsavag3.sonicscramble",
+              "1.0.0",
+              null,
+              null,
+              false,
+              false,
+              progress,
+              CancellationToken.None);
+
+          if (!File.Exists(output))
+              throw new Exception("APK build finished without producing an APK.");
+
+          Console.WriteLine($"APK: {output}");
+          '@ | Set-Content mobiler/PortCli/Program.cs -Encoding UTF8
+
+      - name: Build command-line builder
+        shell: pwsh
+        run: |
+          dotnet build mobiler/PortCli/PortCli.csproj -c Release
+
+      - name: Stage GameMaker runtime files
+        shell: pwsh
+        run: |
+          $out = Resolve-Path mobiler/PortCli/bin/Release/net8.0-windows
+          Copy-Item -Recurse -Force mobiler/'GMS2 APK' $out/'GMS2 APK'
+          if (Test-Path mobiler/Tools) {
+            Copy-Item -Recurse -Force mobiler/Tools $out/Tools
+          }
+
+      - name: Build APK
+        shell: pwsh
+        working-directory: mobiler/PortCli/bin/Release/net8.0-windows
+        run: ./PortCli.exe
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Sonic-Scramble-Android
+          path: mobiler/PortCli/bin/Release/net8.0-windows/Sonic-Scramble-Android.apk
